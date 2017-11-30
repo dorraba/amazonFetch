@@ -2,7 +2,6 @@ import {serverHost, defaultCountry} from './consts/config';
 import URI from 'urijs';
 import _ from 'lodash';
 import {parseString} from 'xml2js-parser';
-import cheerio from 'cheerio';
 import htmlParser from './htmlParser';
 import {getMothlySalesForRank} from './salesCalc';
 
@@ -75,16 +74,14 @@ export const fillSellersDataFromAmazon = (items, country, pingCallback = _.noop)
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2227.1 Safari/537.36',
       }
     });
-    const html = await result.text();
-
-    const $ = cheerio.load(_.toLower(html));
+    let html = (await result.text()).toLowerCase();
     let resultItem = _.chain({
         ...item,
-        reviewsCount: htmlParser.getReviewsCount($),
-        reviewsRatings: htmlParser.getRatings($),
-        ...htmlParser.getSalesRankData($),
-        fulfillment: htmlParser.getFulfillmenet($),
-        buyBox: htmlParser.getBuyBoxSellers($),
+        reviewsCount: htmlParser.getReviewsCount(html),
+        reviewsRatings: htmlParser.getRatings(html),
+        ...htmlParser.getSalesRankData(html),
+        fulfillment: htmlParser.getFulfillmenet(html),
+        buyBox: htmlParser.getBuyBoxSellers(html),
       })
       .pickBy(_.identity)
       .value();

@@ -1,69 +1,43 @@
 import _ from 'lodash';
 
 class HtmlParser {
-  getReviewsCount = ($) => _.chain($('#acrcustomerreviewtext').text())
-                            .toString()
-                            .split(' ')
-                            .get('[0]')
+  getReviewsCount = (html) => {
+    return _.chain(html.match(/<span id="acrCustomerReviewText".*?s*class="a-size-base">(.*?) customer review[s]?<\/span>/mi))
+                            .get('[1]')
+                            .replace(',','')
+                            .toNumber()
+                            .value()
+  }
+
+  getRatings = (html) => _.chain(html.match(/<span id="acrPopover".*?title="(.*?) out of 5 stars">/mi))
+                            .get('[1]')
                             .replace(',','')
                             .toNumber()
                             .value()
 
-  getRatings = ($) => _.chain($('#averagecustomerreviews .a-icon-star').text())
-                        .toString()
-                        .split(' ')
-                        .get('[0]')
-                        .replace(',','')
-                        .toNumber()
-                        .value()
+  getSalesRankData = (html) =>  _.chain(html.match(/#(.*?) in (.*?)\(?<a.*?\/gp\/bestsellers.*?See/mi))
+                                .thru(match => ({
+                                  salesRank: _.chain(match)
+                                              .get('[1]')
+                                            .replace(',','')
+                                            .toNumber()
+                                            .value(),
+                                  category: _.chain(match)
+                                            .get('[2]')
+                                            .toLower()
+                                            .trim()
+                                            .value()
+                                }))
+                                .value()
 
-  getSalesRankData = ($) => {
-
-    const hasBSRtext = _.curry((index, element) => _.includes($(element).text(), 'best sellers rank'))
-    const findBSRmatches = (str) => str.match(/#(.*?) in (.*?)<a.*?\/gp\/bestsellers.*?See/mi)
-    let bsrElement = $('.proddetsectionentry').filter(hasBSRtext);
-    let html = bsrElement.parent() && bsrElement.parent().html();
-    if (!html) {
-      html = $('#salesrank').html();
-    }
-    if (html) {
-      return _.chain(html)
-            .defaultTo('')
-            .thru(findBSRmatches)
-            .thru(matches => {
-              return {
-                salesRank: _.chain(matches || [])
-                            .get('[1]')
-                            .replace(',', '')
-                            .toNumber()
-                            .value(),
-                category: _.chain(matches || [])
-                            .get('[2]')
-                            .unescape()
-                            .replace('(', '')
-                            .trim()
-                            .value(),
-            }}).value();
-    }
-    return {salesRank: 0, category: ''};
-  }
-
-  getFulfillmenet = ($) => {
-    const element = $('#merchant-info').html();
-    if (!element) {
-      return null;
-    }
-    const fba = element.match(/>fulfilled by amazon<\/a>/m) && 'fba';
-    const amz = element.match(/sold by +amazon/m) && 'amz';
+  getFulfillmenet = (html) => {
+    const fba = html.match(/>fulfilled by amazon<\/a>/m) && 'fba';
+    const amz = !fba && html.match(/sold by +amazon/m) && 'amz';
     return fba || amz || 'fbm';
   }
 
-  getBuyBoxSellers = ($) => {
-    const element = $('#mbc-action-panel-wrapper').html();
-    if (!element) {
-      return null;
-    }
-    const matches = element.match(/new<\/b> \((.*?)\) from/m);
+  getBuyBoxSellers = html => {
+    const matches = html.match(/new<\/b> \((.*?)\) from/m);
     return _.toNumber(_.get(matches, '[1]'));
   }
 }
